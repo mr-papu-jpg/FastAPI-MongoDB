@@ -27,7 +27,9 @@ async def obtener_usuarios():
         usuarios.append(u)
     return usuarios
 
-@router.get("/me")
-async def leer_mi_perfil(current_user: str = Depends(obtener_usuario_actual)):
-    return {"mensaje": f"Hola {current_user}, este es tu perfil privado"}
-
+@router.get("/me", response_model=UsuarioResponse)
+async def leer_mi_perfil(usuario: dict = Depends(obtener_usuario_actual)):
+    # Como ya devolvemos el objeto usuario desde la dependencia,
+    # solo tenemos que formatear el ID para Pydantic
+    usuario["id"] = str(usuario["_id"])
+    return usuario
