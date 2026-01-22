@@ -33,3 +33,16 @@ async def leer_mi_perfil(usuario: dict = Depends(obtener_usuario_actual)):
     # solo tenemos que formatear el ID para Pydantic
     usuario["id"] = str(usuario["_id"])
     return usuario
+
+@router.get("/{user_id}", response_model=UsuarioResponse)
+async def obtener_usuario(user_id: str, current_user: dict = Depends(obtener_usuario_actual)):
+    # Verificamos si el ID que solicita es el suyo
+    if str(current_user["_id"]) != user_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="No tienes permiso para ver la información de otros usuarios"
+        )
+    
+    usuario = usuarios_col.find_one({"_id": ObjectId(user_id)})
+    usuario["id"] = str(usuario["_id"])
+    return usuario
