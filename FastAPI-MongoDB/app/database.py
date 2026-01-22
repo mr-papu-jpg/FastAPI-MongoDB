@@ -1,13 +1,18 @@
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
+import mongomock
+
+# Esto crea una base de datos falsa que funciona IGUAL que la real
+client = mongomock.MongoClient()
+db = client["mi_proyecto_db"]
+usuarios_col = db["usuarios"]
+
 
 load_dotenv()
 
-URL_CLOUD = os.getenv("DATA_BASE_URL_CLOUD")
-client = MongoClient(URL_CLOUD)
-db = client["mi_proyecto_db"]
+# Cambiamos a la variable local que ya tienes
+URL_LOCAL = os.getenv("DATA_BASE_URL")
 
-# Exportamos la colección para usarla en los routers
-usuarios_col = db["usuarios"]
-
+# Si por alguna razón el .env no carga, usamos el default de mongo
+client = MongoClient(URL_LOCAL or "mongodb://localhost:27017/")

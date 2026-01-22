@@ -1,27 +1,28 @@
-from fastapi import APIRouter, HTTPException, Depends
-from bson import ObjectId
+from fastapi import APIRouter, HTTPException
 from app.database import usuarios_col
 from app.models.user_models import UsuarioCreate, UsuarioResponse
-from app.auth.security import obtener_hash
+from app.auth.security import obtener_hash # Importante
+from bson import ObjectId
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 @router.post("/", response_model=UsuarioResponse)
 async def crear_usuario(user: UsuarioCreate):
-    # Hashear contraseña antes de guardar
     user_dict = user.dict()
+    
+    # Aquí ocurre la magia del Hashing (Passlib)
     user_dict["password"] = obtener_hash(user_dict["password"])
     
     resultado = usuarios_col.insert_one(user_dict)
     
-    # Creamos la respuesta adaptando el _id
-    return {**user.dict(), "id": str(resultado.inserted_id)}
+    # Devolvemos el objeto con el ID de Mongo
+    return {**user_dict, "id": str(resultado.inserted_id)}
 
-@router.get("/{id}", response_model=UsuarioResponse)
-async def obtener_usuario(id: str):
-    user = usuarios_col.find_one({"_id": ObjectId(id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    user["id"] = str(user["_id"])
-    return user
+@router.get("/")
+async def obtener_usuarios():
+    usuarios = []
+    for u in usuarios_col.find():
+        u["id"] = str(u["_id"])
+        usuarios.append(u)
+    return usuarios
 
