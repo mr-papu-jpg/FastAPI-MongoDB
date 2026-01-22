@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.database import usuarios_col
 from app.models.user_models import UsuarioCreate, UsuarioResponse
 from app.auth.security import obtener_hash # Importante
 from bson import ObjectId
+from app.auth.dependencies import obtener_usuario_actual
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
@@ -25,4 +26,8 @@ async def obtener_usuarios():
         u["id"] = str(u["_id"])
         usuarios.append(u)
     return usuarios
+
+@router.get("/me")
+async def leer_mi_perfil(current_user: str = Depends(obtener_usuario_actual)):
+    return {"mensaje": f"Hola {current_user}, este es tu perfil privado"}
 
