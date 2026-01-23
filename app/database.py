@@ -39,6 +39,7 @@ try:
     
     db = client["mi_proyecto_db"]
     usuarios_col = db["usuarios"]
+    transferencias_col = db["transferencias"]
     print("✅ ¡LOGRADO! Conectado a Atlas.")
 
 except Exception as e:
@@ -47,5 +48,6 @@ except Exception as e:
     client = mongomock.MongoClient()
     db = client["mi_proyecto_db"]
     usuarios_col = db["usuarios"]
+    transferencias_col = db["transferencias"]
     print("⚠️ Usando MONGOMOCK de respaldo.")
 
