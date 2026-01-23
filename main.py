@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 # 1. Importar la base de datos y colecciones primero
 from app.database import usuarios_col, transferencias_col 
 from app.routers import user_routes, auth_routes, transacciones
 from fastapi.staticfiles import StaticFiles
 from app.routers import reportes
+from app.database import guardar_datos_a_disco
 
 app = FastAPI()
 
@@ -49,3 +50,13 @@ ejecutar_seed()
 def home():
     return {"message": "API Financiera con Seed Automático activa"}
 
+
+@app.middleware("http")
+async def persistencia_middleware(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Si la petición fue un POST, PUT o DELETE, guardamos cambios
+    if request.method in ["POST", "PUT", "DELETE"]:
+        guardar_datos_a_disco()
+        
+    return response

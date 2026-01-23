@@ -1,53 +1,38 @@
-'''
-
-import socket
-
-# ESTO ES MAGIA NEGRA PARA DNS
-# Mapeamos el nombre del servidor directamente a la IP que sabemos que funciona
-def resolver_atlas():
-    hosts = [
-        "cluster0-shard-00-00.4rsloai.mongodb.net",
-        "cluster0-shard-00-01.4rsloai.mongodb.net",
-        "cluster0-shard-00-02.4rsloai.mongodb.net"
-    ]
-    ip_conocida = "18.213.121.217"
-    
-    old_getaddrinfo = socket.getaddrinfo
-    def new_getaddrinfo(*args, **kwargs):
-        if args[0] in hosts:
-            return old_getaddrinfo(ip_conocida, *args[1:], **kwargs)
-        return old_getaddrinfo(*args, **kwargs)
-    
-    socket.getaddrinfo = new_getaddrinfo
-
-resolver_atlas()
-'''
-from pymongo import MongoClient
+import json
 import os
-from dotenv import load_dotenv
+from mongomock import MongoClient
 
-load_dotenv()
-URL_CLOUD = os.getenv("DATA_BASE_URL_CLOUD")
-usuarios_col = None
+# Ruta del archivo donde guardaremos los datos
+DB_FILE = "database_persistence.json"
 
-try:
-    # Aumentamos el tiempo de espera a 10 segundos por si la VPN es lenta
-    client = MongoClient(URL_CLOUD, serverSelectionTimeoutMS=10000)
-    
-    # Probamos la conexión
-    client.admin.command('ping')
-    
-    db = client["mi_proyecto_db"]
-    usuarios_col = db["usuarios"]
-    transferencias_col = db["transferencias"]
-    print("✅ ¡LOGRADO! Conectado a Atlas.")
+client = MongoClient()
+db = client["billetera_db"]
+usuarios_col = db["usuarios"]
+transferencias_col = db["transferencias"]
 
-except Exception as e:
-    print(f"❌ Error: {e}")
-    import mongomock
-    client = mongomock.MongoClient()
-    db = client["mi_proyecto_db"]
-    usuarios_col = db["usuarios"]
-    transferencias_col = db["transferencias"]
-    print("⚠️ Usando MONGOMOCK de respaldo.")
+def guardar_datos_a_disco():
+    """Vuelca el contenido de mongomock a un archivo JSON."""
+    datos = {
+        "usuarios": list(usuarios_col.find({}, {"_id": 0})),
+        "transferencias": list(transferencias_col.find({}, {"_id": 0}))
+    }
+    with open(DB_FILE, "w") as f:
+        json.dump(datos, f, indent=4)
+    print("💾 Datos guardados en disco.")
+
+def cargar_datos_desde_disco():
+    """Carga los datos del archivo JSON a mongomock al arrancar."""
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            datos = json.load(f)
+            if datos["usuarios"]:
+                usuarios_col.insert_many(datos["usuarios"])
+            if datos["transferencias"]:
+                transferencias_col.insert_many(datos["transferencias"])
+        print(f"📂 Datos cargados desde {DB_FILE}")
+    else:
+        print("🆕 No hay base de datos previa. Iniciando limpia.")
+
+# Cargar al importar el módulo
+cargar_datos_desde_disco()
 
