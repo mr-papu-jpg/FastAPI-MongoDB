@@ -2,6 +2,8 @@ from fastapi import FastAPI
 # 1. Importar la base de datos y colecciones primero
 from app.database import usuarios_col, transferencias_col 
 from app.routers import user_routes, auth_routes, transacciones
+from fastapi.staticfiles import StaticFiles
+from app.routers import reportes
 
 app = FastAPI()
 
@@ -36,6 +38,8 @@ def ejecutar_seed():
 app.include_router(user_routes.router)
 app.include_router(auth_routes.router)
 app.include_router(transacciones.router)
+app.include_router(reportes.router)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 4. EJECUTAR EL SEED AL FINAL
 # Esto garantiza que todo lo anterior ya cargó
