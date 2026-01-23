@@ -2,10 +2,13 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 import os
+from passlib.context import CryptContext
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura")
+# Centralizamos aquí:
+SECRET_KEY = "mi_clave_secreta_ultra_fija_123"
 ALGORITHM = "HS256"
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def obtener_hash(password: str):
     return pwd_context.hash(password)

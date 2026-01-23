@@ -4,50 +4,66 @@ from reportlab.pdfgen import canvas
 from datetime import datetime
 import os
 
-# Rutas base
-STATIC_DIR = "static/reportes"
+# Configuración de rutas absoluta para Termux
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+CSV_DIR = os.path.join(BASE_DIR, "static", "reportes", "csv")
+PDF_DIR = os.path.join(BASE_DIR, "static", "reportes", "pdf")
+
+# Aseguramos que las carpetas existan al importar el servicio
+os.makedirs(CSV_DIR, exist_ok=True)
+os.makedirs(PDF_DIR, exist_ok=True)
 
 class ReportService:
     
     @staticmethod
     def generar_csv_transacciones(historial):
-        """Convierte una lista de transacciones en un archivo CSV."""
         if not historial:
+            print("⚠️ DEBUG: No hay historial para exportar CSV.")
             return None
         
-        # Limpiamos los datos para el CSV (quitamos el _id de MongoDB)
+        # Limpieza de datos (quitar _id de Mongo)
+        datos = []
         for t in historial:
-            t.pop('_id', None)
-        
-        df = pd.DataFrame(historial)
+            item = t.copy()
+            item.pop('_id', None)
+            datos.append(item)
+            
+        df = pd.DataFrame(datos)
         filename = f"transacciones_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        filepath = os.path.join(STATIC_DIR, "csv", filename)
+        filepath = os.path.join(CSV_DIR, filename)
         
         df.to_csv(filepath, index=False)
+        print(f"✅ CSV Creado en: {filepath}")
         return filepath
 
     @staticmethod
     def generar_pdf_usuarios(usuarios):
-        """Crea un PDF con la lista de usuarios y su dinero actual."""
+        """Crea un PDF con la lista de usuarios y su saldo."""
         filename = f"reporte_usuarios_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        filepath = os.path.join(STATIC_DIR, "pdf", filename)
+        filepath = os.path.join(PDF_DIR, filename)
         
-        c = canvas.Canvas(filepath, pagesize=letter)
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(100, 750, "REPORTE GENERAL DE USUARIOS")
-        c.setFont("Helvetica", 12)
-        c.drawString(100, 730, f"Fecha de creación: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        c.line(100, 720, 500, 720)
-        
-        y = 690
-        for u in usuarios:
-            texto = f"Usuario: {u['nombre']} | Saldo: ${u['dinero']}"
-            c.drawString(100, y, texto)
-            y -= 20 # Bajar una línea
-            if y < 50: # Crear página nueva si se acaba el espacio
-                c.showPage()
-                y = 750
-        
-        c.save()
-        return filepath
+        try:
+            c = canvas.Canvas(filepath, pagesize=letter)
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(100, 750, "REPORTE GENERAL DE USUARIOS")
+            
+            c.setFont("Helvetica", 12)
+            c.drawString(100, 730, f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            c.line(100, 720, 500, 720)
+            
+            y = 690
+            for u in usuarios:
+                texto = f"Usuario: {u['nombre']} | Saldo: ${u.get('dinero', 0)}"
+                c.drawString(100, y, texto)
+                y -= 20
+                if y < 50:
+                    c.showPage()
+                    y = 750
+            
+            c.save()
+            print(f"✅ PDF Creado en: {filepath}")
+            return filepath
+        except Exception as e:
+            print(f"❌ Error creando PDF: {e}")
+            return None
 
