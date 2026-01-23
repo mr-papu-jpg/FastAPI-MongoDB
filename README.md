@@ -139,6 +139,20 @@ http GET :8000/usuarios/me "Authorization: Bearer TU_TOKEN_AQUI"
 http POST :8000/transacciones/enviar destino_nombre="UsuarioB" monto:=250.50 "Authorization: Bearer TU_TOKEN_AQUI"
 ```
 
+4. **Use of the transfer function:**
+
+```bash
+http POST :8000/transacciones/enviar \
+"Authorization: Bearer TU_TOKEN_AQUI" \
+receptor="UsuarioB" monto:=50.0 comentario="Prueba de historial"
+```
+
+5. **Review history:**
+
+```bash
+http GET :8000/transacciones/historial "Authorization: Bearer TU_TOKEN_AQUI"
+```
+
 Go to your favorite browser and copy the default URL uvicorn and add to the end /docs and authenticate button "ang" as username, and "11092003" as key
 
 ### All made in Termux
