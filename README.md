@@ -10,7 +10,9 @@ Fastapi project where everything learned from database management with Mongomock
 
 ## Updates:
 
-* *20/01/2026*: Basic creation of a project, the basis of the project.
+* *22/01/2026*: Basic creation of a project, the basis of the project.
+
+* *23/01/2026*: Creation of complex security functionalities, user creation functions, and implementation of a script and seed for testing.
 
 ## Connectivity Report 
 
