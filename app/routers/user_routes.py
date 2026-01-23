@@ -1,48 +1,53 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from app.database import usuarios_col
-from app.models.user_models import UsuarioCreate, UsuarioResponse
-from app.auth.security import obtener_hash # Importante
-from bson import ObjectId
+from app.auth.utils import obtener_password_hash # Importamos nuestra utilidad
 from app.auth.dependencies import obtener_usuario_actual
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
-@router.post("/", response_model=UsuarioResponse)
-async def crear_usuario(user: UsuarioCreate):
-    user_dict = user.dict()
-    
-    # Aquí ocurre la magia del Hashing (Passlib)
-    user_dict["password"] = obtener_hash(user_dict["password"])
-    
-    resultado = usuarios_col.insert_one(user_dict)
-    
-    # Devolvemos el objeto con el ID de Mongo
-    return {**user_dict, "id": str(resultado.inserted_id)}
+# Esquema para el registro
+class UserRegister(BaseModel):
+    nombre: str
+    password: str
+    dinero: float = 0.0
 
-@router.get("/")
-async def obtener_usuarios():
-    usuarios = []
-    for u in usuarios_col.find():
-        u["id"] = str(u["_id"])
-        usuarios.append(u)
-    return usuarios
+@router.post("/")
+async def registrar_usuario(usuario: UserRegister):
+    # Verificar si ya existe
+    if usuarios_col.find_one({"nombre": usuario.nombre}):
+        raise HTTPException(status_code=400, detail="El usuario ya existe")
+    
+    # Cifrar la contraseña usando nuestra función centralizada
+    password_cifrada = obtener_password_hash(usuario.password)
+    
+    nuevo_usuario = {
+        "nombre": usuario.nombre,
+        "password": password_cifrada,
+        "dinero": usuario.dinero,
+        "esta_activo": True
+    }
+    
+    usuarios_col.insert_one(nuevo_usuario)
+    return {"message": "Usuario creado con éxito", "nombre": usuario.nombre}
 
-@router.get("/me", response_model=UsuarioResponse)
-async def leer_mi_perfil(usuario: dict = Depends(obtener_usuario_actual)):
-    # Como ya devolvemos el objeto usuario desde la dependencia,
-    # solo tenemos que formatear el ID para Pydantic
-    usuario["id"] = str(usuario["_id"])
+@router.get("/me")
+async def leer_perfil(usuario: dict = Depends(obtener_usuario_actual)):
+    # No devolvemos el password por seguridad
+    usuario.pop("password", None)
+    usuario["_id"] = str(usuario["_id"])
     return usuario
 
-@router.get("/{user_id}", response_model=UsuarioResponse)
-async def obtener_usuario(user_id: str, current_user: dict = Depends(obtener_usuario_actual)):
-    # Verificamos si el ID que solicita es el suyo
-    if str(current_user["_id"]) != user_id:
-        raise HTTPException(
-            status_code=403, 
-            detail="No tienes permiso para ver la información de otros usuarios"
-        )
-    
-    usuario = usuarios_col.find_one({"_id": ObjectId(user_id)})
-    usuario["id"] = str(usuario["_id"])
-    return usuario
+@router.get("/saldo")
+async def consultar_saldo(usuario: dict = Depends(obtener_usuario_actual)):
+    return {"nombre": usuario["nombre"], "dinero": usuario["dinero"]}
+
+@router.get("/buscar/{nombre_buscado}")
+async def buscar_usuario(nombre_buscado: str, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    # Buscamos usuarios que contengan ese nombre (regex) sin mostrar password
+    resultados = list(usuarios_col.find(
+        {"nombre": {"$regex": nombre_buscado, "$options": "i"}},
+        {"password": 0, "_id": 0}
+    ))
+    return {"resultados": resultados}
+
