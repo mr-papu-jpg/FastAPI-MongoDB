@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class TransferenciaEsquema(BaseModel):
-    emisor: str
+    emisor: Optional[str] = None
     receptor: str
     monto: float = Field(..., gt=0) # gt=0 significa "Greater Than 0"
     fecha: datetime = Field(default_factory=datetime.utcnow)
