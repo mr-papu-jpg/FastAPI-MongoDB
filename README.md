@@ -61,29 +61,30 @@ except Exception:
 
 * **Future Action**: Connectivity will be re-tested from a different network gateway or via a dedicated proxy to bypass mobile ISP restrictions.
 
-Why we are using mongomock instead of MongoDB Atlas (Current Status)
+*Why we are using mongomock instead of MongoDB Atlas (Current Status)*
 
 This project currently uses mongomock for the database layer. This decision was made due to infrastructure limitations specific to the Termux/Android environment in certain network regions:
 
-Network Restrictions: Local ISPs and mobile network gateways often block port 27017 and intercept custom DNS resolutions required for MongoDB Atlas SRV records.
+* Network Restrictions: Local ISPs and mobile network gateways often block port 27017 and intercept custom DNS resolutions required for MongoDB Atlas SRV records.
 
 
-Protocol Overhead: Even with VPN tunneling, the Android network stack in an emulated terminal environment (Termux) introduces latency and handshake failures during TLS/SSL negotiation with AWS-hosted MongoDB clusters.
+* Protocol Overhead: Even with VPN tunneling, the Android network stack in an emulated terminal environment (Termux) introduces latency and handshake failures during TLS/SSL negotiation with AWS-hosted MongoDB clusters.
 
-Development Velocity: To prioritize the development of core API features (Authentication, JWT, Financial Logic) over network troubleshooting, we implemented a Mocking Strategy that allows the app to be fully functional in a local-memory environment.
+* Development Velocity: To prioritize the development of core API features (Authentication, JWT, Financial Logic) over network troubleshooting, we implemented a Mocking Strategy that allows the app to be fully functional in a local-memory environment.
 
-How to Switch to a Production Environment (Standard PC/Server)
+*How to Switch to a Production Environment (Standard PC/Server)*
 
 The codebase is built with a "Cloud-Ready" architecture. If you are running this project on a standard Linux, macOS, or Windows environment, you can switch to a real MongoDB Atlas instance in two steps:
 
-1. Configure Environment Variables:
+1. **Configure Environment Variables:**
 Update your .env file with your Atlas Connection String:
 
 ```env
 DATA_BASE_URL_CLOUD=mongodb+srv://<user>:<password>@cluster0.mongodb.net/my_db
 ```
 
-The Connection Logic:
+* **The Connection Logic:**
+
 The system is designed to automatically attempt a cloud connection. If the environment allows it, the app will prioritize the MongoClient over mongomock automatically:
 
 ```python
@@ -153,6 +154,67 @@ receptor="UsuarioB" monto:=50.0 comentario="Prueba de historial"
 
 ```bash
 http GET :8000/transacciones/historial "Authorization: Bearer TU_TOKEN_AQUI"
+```
+
+## 🚀 Quick Start Guide (HTTPie)
+
+Follow this sequence to test the full API flow.
+
+### 1. Authentication
+First, obtain your access token. The system seeds an initial user: `Angstart` / `password123`.
+
+```bash
+# Login to get the Token
+http -f POST :8000/auth/login username="Angstart" password="password123"
+
+# Save the token into a variable (Linux/Termux)
+export TOKEN="your_access_token_here"
+```
+
+### 2. User ManagementCheck
+
+Check your profile or list users (Admin only).
+
+```bash
+# Get current user profile
+http GET :8000/usuarios/me "Authorization: Bearer $TOKEN"
+
+# List all registered users
+http GET :8000/usuarios/ "Authorization: Bearer $TOKEN"
+```
+
+### 3. Transactions
+
+Perform money transfers between users.
+
+```bash
+# Send money to 'UsuarioB'
+http POST :8000/transacciones/enviar \
+"Authorization: Bearer $TOKEN" \
+receptor="UsuarioB" \
+monto:=50.0 \
+comentario="Payment for services"
+```
+
+### 4. Generating Reports
+
+Export your activity to physical files.
+
+```bash
+# Export your transactions to CSV
+http GET :8000/reportes/exportar-mis-transacciones "Authorization: Bearer $TOKEN"
+
+# Generate a PDF report of all users (Admin)
+http GET :8000/reportes/admin/pdf-usuarios "Authorization: Bearer $TOKEN"
+```
+
+### 5. File Verification
+
+Verify that the files were created in the static directory.
+
+```bash
+ls -lh static/reportes/csv/
+ls -lh static/reportes/pdf/
 ```
 
 Go to your favorite browser and copy the default URL uvicorn and add to the end /docs and authenticate button "ang" as username, and "11092003" as key
